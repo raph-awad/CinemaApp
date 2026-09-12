@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import '@/lib/client-mock';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 

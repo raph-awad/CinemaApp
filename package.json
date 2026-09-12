@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:pages": "mv src/app/api src/api-server 2>/dev/null || true; next build; mv src/api-server src/app/api 2>/dev/null || true; touch out/.nojekyll",
     "start": "next start",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
