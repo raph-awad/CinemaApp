@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Flame,
 } from 'lucide-react';
+import { MOCK_MOVIES, MOCK_CINEMAS } from '@/lib/client-mock';
 
 interface Movie {
   id: string;
@@ -41,9 +42,9 @@ interface Cinema {
 }
 
 export default function HomePage() {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [cinemas, setCinemas] = useState<Cinema[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [movies, setMovies] = useState<Movie[]>(MOCK_MOVIES);
+  const [cinemas, setCinemas] = useState<Cinema[]>(MOCK_CINEMAS);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGenre, setSelectedGenre] = useState('all');
   const [selectedCinema, setSelectedCinema] = useState('all');
@@ -63,7 +64,23 @@ export default function HomePage() {
   });
 
   const fetchMovies = () => {
-    setLoading(true);
+    // Client-side instant filter fallback
+    let filtered = [...MOCK_MOVIES];
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (m) => m.title.toLowerCase().includes(q) || m.synopsis.toLowerCase().includes(q)
+      );
+    }
+    if (selectedGenre !== 'all') {
+      filtered = filtered.filter((m) =>
+        m.genres.some((g) => g.slug === selectedGenre || g.name.toLowerCase() === selectedGenre)
+      );
+    }
+    if (selectedLanguage !== 'all') {
+      filtered = filtered.filter((m) => m.language.toLowerCase() === selectedLanguage.toLowerCase());
+    }
+
     const params = new URLSearchParams();
     if (searchQuery) params.append('search', searchQuery);
     if (selectedGenre !== 'all') params.append('genre', selectedGenre);
@@ -72,11 +89,20 @@ export default function HomePage() {
     if (selectedDate) params.append('date', selectedDate);
 
     fetch(`/api/movies?${params.toString()}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setMovies(data.movies || []);
+      .then((res) => {
+        if (!res.ok) throw new Error('API not available');
+        return res.json();
       })
-      .catch((err) => console.error('Failed to load movies:', err))
+      .then((data) => {
+        if (data.movies && data.movies.length > 0) {
+          setMovies(data.movies);
+        } else {
+          setMovies(filtered);
+        }
+      })
+      .catch(() => {
+        setMovies(filtered);
+      })
       .finally(() => setLoading(false));
   };
 

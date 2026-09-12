@@ -15,6 +15,7 @@ import {
   ArrowRight,
   X,
 } from 'lucide-react';
+import { MOCK_MOVIES, generateMockShowtimes } from '@/lib/client-mock';
 
 interface Showtime {
   id: string;
@@ -80,9 +81,18 @@ export default function MovieDetailsPage() {
 
   useEffect(() => {
     if (!slug) return;
-    setLoading(true);
+    
+    // Set instant fallback from mock data
+    const fallbackMovie = MOCK_MOVIES.find((m) => m.slug === slug) || MOCK_MOVIES[0];
+    const fallbackShowtimes = generateMockShowtimes(fallbackMovie.slug);
+    setMovie({ ...fallbackMovie, showtimes: fallbackShowtimes as any });
+    setLoading(false);
+
     fetch(`/api/movies`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('API not available');
+        return res.json();
+      })
       .then((data) => {
         const found = data.movies?.find((m: MovieDetails) => m.slug === slug);
         if (found) {
@@ -117,12 +127,14 @@ export default function MovieDetailsPage() {
                   });
                 });
               });
-              setMovie({ ...found, showtimes: allShowtimes });
-            });
+              if (allShowtimes.length > 0) {
+                setMovie({ ...found, showtimes: allShowtimes });
+              }
+            })
+            .catch(() => {});
         }
       })
-      .catch((err) => console.error('Failed to fetch movie details:', err))
-      .finally(() => setLoading(false));
+      .catch(() => {});
   }, [slug]);
 
   if (loading) {

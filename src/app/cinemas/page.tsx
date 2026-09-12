@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, Phone, Sparkles, Film, Clock, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { MOCK_CINEMAS } from '@/lib/client-mock';
 
 interface Showtime {
   id: string;
@@ -38,19 +39,32 @@ interface Cinema {
 }
 
 export default function CinemasPage() {
-  const [cinemas, setCinemas] = useState<Cinema[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [cinemas, setCinemas] = useState<any[]>(MOCK_CINEMAS);
+  const [loading, setLoading] = useState(false);
   const [selectedCity, setSelectedCity] = useState('all');
 
   useEffect(() => {
-    setLoading(true);
+    let filtered = [...MOCK_CINEMAS];
+    if (selectedCity !== 'all') {
+      filtered = filtered.filter((c) => c.city.toLowerCase() === selectedCity.toLowerCase());
+    }
+
     const query = selectedCity !== 'all' ? `?city=${encodeURIComponent(selectedCity)}` : '';
     fetch(`/api/cinemas${query}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setCinemas(data.cinemas || []);
+      .then((res) => {
+        if (!res.ok) throw new Error('API not available');
+        return res.json();
       })
-      .catch((err) => console.error('Failed to load cinemas:', err))
+      .then((data) => {
+        if (data.cinemas && data.cinemas.length > 0) {
+          setCinemas(data.cinemas);
+        } else {
+          setCinemas(filtered);
+        }
+      })
+      .catch(() => {
+        setCinemas(filtered);
+      })
       .finally(() => setLoading(false));
   }, [selectedCity]);
 
@@ -154,7 +168,7 @@ export default function CinemasPage() {
                         Premium Amenities
                       </h4>
                       <div className="flex flex-wrap gap-2">
-                        {cinema.facilities?.map((f, idx) => (
+                        {cinema.facilities?.map((f: string, idx: number) => (
                           <span
                             key={idx}
                             className="inline-flex items-center space-x-1 text-xs bg-white/5 border border-white/10 text-zinc-300 px-2.5 py-1 rounded-md"
@@ -174,7 +188,7 @@ export default function CinemasPage() {
                       </h4>
 
                       <div className="space-y-3">
-                        {cinema.auditoriums?.map((aud) => (
+                        {cinema.auditoriums?.map((aud: any) => (
                           <div
                             key={aud.id}
                             className="p-3 rounded-xl bg-black/40 border border-white/5 space-y-2"
@@ -191,7 +205,7 @@ export default function CinemasPage() {
                                   No screenings today
                                 </span>
                               ) : (
-                                aud.showtimes?.map((st) => {
+                                aud.showtimes?.map((st: any) => {
                                   const timeStr = new Date(st.startTime).toLocaleTimeString([], {
                                     hour: '2-digit',
                                     minute: '2-digit',

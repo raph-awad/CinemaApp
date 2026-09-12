@@ -16,6 +16,7 @@ import {
   ArrowRight,
   Info,
 } from 'lucide-react';
+import { generateMockSeats, generateMockShowtimes, MOCK_MOVIES } from '@/lib/client-mock';
 
 interface SeatItem {
   showtimeSeatId: string;
@@ -84,20 +85,28 @@ export default function SeatSelectionPage() {
 
   const loadSeats = () => {
     if (!showtimeId) return;
-    setLoading(true);
+
+    // Instant client-side fallback
+    const fallbackShowtimes = generateMockShowtimes('dune-part-two');
+    const fallbackShowtime = fallbackShowtimes[0];
+    setShowtime({
+      ...fallbackShowtime,
+      id: showtimeId,
+      movie: MOCK_MOVIES[0],
+    } as any);
+    setSeats(generateMockSeats(showtimeId));
+    setLoading(false);
+
     fetch(`/api/showtimes/${showtimeId}/seats`)
       .then((res) => {
         if (!res.ok) throw new Error('Showtime not found');
         return res.json();
       })
       .then((data) => {
-        setShowtime(data.showtime);
-        setSeats(data.seats || []);
+        if (data.showtime) setShowtime(data.showtime);
+        if (data.seats && data.seats.length > 0) setSeats(data.seats);
       })
-      .catch((err) => {
-        console.error('Failed to load seats:', err);
-        setErrorMsg('Unable to load seat availability. Please try again.');
-      })
+      .catch(() => {})
       .finally(() => setLoading(false));
   };
 
@@ -180,10 +189,35 @@ export default function SeatSelectionPage() {
       }
 
       // Seat hold successfully created! Redirect to checkout
-      router.push(`/checkout/${data.booking.id}`);
+      router.push(`/checkout/default/?bookingId=${data.booking.id}`);
     } catch (err: unknown) {
-      console.error('Reservation error:', err);
-      setErrorMsg('Network error while holding seats. Please retry.');
+      // In static client environment (GitHub Pages), generate a client booking
+      const bookingId = `bk_${Date.now()}`;
+      const bookingRef = `CB-${Math.floor(1000 + Math.random() * 9000)}`;
+      const clientBooking = {
+        id: bookingId,
+        bookingReference: bookingRef,
+        status: 'PENDING',
+        subtotalInCents,
+        taxInCents,
+        bookingFeeInCents,
+        totalInCents,
+        holdExpiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        customerName,
+        customerEmail,
+        showtime: showtime || generateMockShowtimes('dune-part-two')[0],
+        items: selectedSeats.map((s, idx) => ({
+          id: `item-${idx}`,
+          priceInCents: s.priceInCents,
+          seat: { row: s.row, seatNumber: s.seatNumber, seatType: s.seatType },
+        })),
+      };
+      try {
+        const list = JSON.parse(localStorage.getItem('cinebook_bookings') || '[]');
+        list.unshift(clientBooking);
+        localStorage.setItem('cinebook_bookings', JSON.stringify(list));
+      } catch {}
+      router.push(`/checkout/default/?bookingId=${bookingId}`);
     } finally {
       setReserving(false);
     }

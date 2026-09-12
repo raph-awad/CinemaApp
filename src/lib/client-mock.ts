@@ -1,3 +1,5 @@
+'use client';
+
 /**
  * Client-side mock API interceptor for GitHub Pages static hosting
  * Allows CineBook to run 100% in the browser without requiring a Node.js server.

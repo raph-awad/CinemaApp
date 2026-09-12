@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import '@/lib/client-mock';
+import ClientInit from '@/components/ClientInit';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
@@ -35,6 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="min-h-screen flex flex-col bg-[#08090d] text-zinc-100 antialiased selection:bg-amber-500 selection:text-black">
+        <ClientInit />
         <Navbar />
         <main className="flex-grow">{children}</main>
         <Footer />
